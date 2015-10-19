@@ -38,7 +38,6 @@ namespace multiverso
         {
         public:
             HuffmanEncoder();
-            ~HuffmanEncoder();
             /*!
             * \brief Save the word-huffmancode in the file
             */

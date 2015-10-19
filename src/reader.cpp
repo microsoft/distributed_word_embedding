@@ -14,8 +14,7 @@ namespace multiverso
             stopwords_table_.clear();
             if (option_->stopwords)
             {
-                FILE* fid;
-                fopen_s(&fid, option_->sw_file, "r");
+                FILE* fid = fopen(option_->sw_file, "r");
                 while (ReadWord(word_, fid))
                 {
                     stopwords_table_.insert(word_);
@@ -24,7 +23,7 @@ namespace multiverso
                 fclose(fid);
             }
 
-            fopen_s(&file_, input_file, "r");
+            file_ = fopen(input_file, "r");
         }
 
         Reader::~Reader()
@@ -90,7 +89,7 @@ namespace multiverso
                     }
                     if (ch == '\n')
                     {
-                        strcpy_s(word, kMaxWordSize, (char *)"</s>");
+                        strcpy(word, (char *)"</s>");
                         return true;
                     }
                     else continue;

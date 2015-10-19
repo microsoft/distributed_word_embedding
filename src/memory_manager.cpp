@@ -22,7 +22,7 @@ namespace multiverso
         void MemoryManager::ReturnBlocks(std::vector<real*>& blocks)
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            for (int i = 0; i < blocks.size(); ++i)
+            for (size_t i = 0; i < blocks.size(); ++i)
                 delete[] blocks[i];
         }
 

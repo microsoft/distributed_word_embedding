@@ -29,7 +29,6 @@ int main(int argc, char *argv[])
         Distributed_wordembedding *ptr = new (std::nothrow)Distributed_wordembedding();
         assert(ptr != nullptr);
         ptr->Run(argc, argv);
-        delete ptr;
     }
     catch (std::bad_alloc &memExp)
     {

@@ -13,8 +13,8 @@ namespace multiverso
 
             //the log which will store the begin and end time of ParseAndRequest
             char log_name[100];
-            sprintf_s(log_name, "parameter_loader%s.txt", g_log_suffix.c_str());
-            fopen_s(&log_file_, log_name, "w");
+            sprintf(log_name, "parameter_loader%s.txt", g_log_suffix.c_str());
+            log_file_ = fopen(log_name, "w");
         }
 	
         void ParameterLoader::ParseAndRequest(
@@ -25,7 +25,7 @@ namespace multiverso
                 start_ = clock();
             }
 
-            fprintf_s(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
+            fprintf(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
             multiverso::Log::Info("Rank %d ParameterLoader begin %d\n",
                 multiverso::Multiverso::ProcessRank(), parse_and_request_count_);
             ++parse_and_request_count_;
@@ -54,7 +54,7 @@ namespace multiverso
 
             multiverso::Log::Info("Rank %d ParameterLoader finish %d\n",
                 multiverso::Multiverso::ProcessRank(), parse_and_request_count_ - 1);
-            fprintf_s(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
+            fprintf(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
             fflush(log_file_);
         }
 

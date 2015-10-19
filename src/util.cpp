@@ -1,7 +1,4 @@
 #include "util.h"
-#include <sstream>
-#include <chrono>
-#include <iomanip>
 
 namespace multiverso
 {
@@ -41,35 +38,34 @@ namespace multiverso
         //Input all the local model-arguments 
         void Option::ParseArgs(int argc, char* argv[])
         {
-            char* end_ptr = nullptr;
             for (int i = 1; i < argc; i += 2)
             {
-                if (strcmp(argv[i], "-size") == 0) embeding_size = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));  
+                if (strcmp(argv[i], "-size") == 0) embeding_size = atoi(argv[i + 1]);
                 if (strcmp(argv[i], "-train_file") == 0) train_file = argv[i + 1];
                 if (strcmp(argv[i], "-endpoints_file") == 0) endpoints_file = argv[i + 1];
                 if (strcmp(argv[i], "-read_vocab") == 0) read_vocab_file = argv[i + 1];
-                if (strcmp(argv[i], "-binary") == 0) output_binary = (strtol(argv[i + 1], &end_ptr, 10) != 0);
-                if (strcmp(argv[i], "-cbow") == 0) cbow = (strtol(argv[i + 1], &end_ptr, 10) != 0);
-                if (strcmp(argv[i], "-alpha") == 0) init_learning_rate = strtof(argv[i + 1], &end_ptr);
+                if (strcmp(argv[i], "-binary") == 0) output_binary = (atoi(argv[i + 1]) != 0);
+                if (strcmp(argv[i], "-cbow") == 0) cbow = (atoi(argv[i + 1]) != 0);
+                if (strcmp(argv[i], "-alpha") == 0) init_learning_rate = static_cast<real>(atof(argv[i + 1]));
                 if (strcmp(argv[i], "-output") == 0) output_file = argv[i + 1];
-                if (strcmp(argv[i], "-window") == 0) window_size = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-sample") == 0) sample = strtof(argv[i + 1], &end_ptr);
-                if (strcmp(argv[i], "-hs") == 0) hs = (strtol(argv[i + 1], &end_ptr, 10) != 0);
-                if (strcmp(argv[i], "-data_block_size") == 0) data_block_size = strtol(argv[i + 1], &end_ptr, 10);
-                if (strcmp(argv[i], "-max_preload_data_size") == 0) max_preload_data_size = strtol(argv[i + 1], &end_ptr, 10);
-                if (strcmp(argv[i], "-negative") == 0) negative_num = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-threads") == 0) thread_cnt = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-min_count") == 0) min_count = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-epoch") == 0) epoch = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-stopwords") == 0) stopwords = (strtol(argv[i + 1], &end_ptr, 10) != 0);
+                if (strcmp(argv[i], "-window") == 0) window_size = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-sample") == 0) sample = static_cast<real>(atof(argv[i + 1]));
+                if (strcmp(argv[i], "-hs") == 0) hs = (atoi(argv[i + 1]) != 0);
+                if (strcmp(argv[i], "-data_block_size") == 0) data_block_size = atoll(argv[i + 1]);
+                if (strcmp(argv[i], "-max_preload_data_size") == 0) max_preload_data_size = atoll(argv[i + 1]);
+                if (strcmp(argv[i], "-negative") == 0) negative_num = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-threads") == 0) thread_cnt = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-min_count") == 0) min_count = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-epoch") == 0) epoch = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-stopwords") == 0) stopwords = (atoi(argv[i + 1]) != 0);
                 if (strcmp(argv[i], "-sw_file") == 0)  sw_file = argv[i + 1];
-                if (strcmp(argv[i], "-use_adagrad") == 0) use_adagrad = (strtol(argv[i + 1], &end_ptr, 10) != 0);
-                if (strcmp(argv[i], "-is_pipeline") == 0) is_pipeline = (strtol(argv[i + 1], &end_ptr, 10) != 0);
-                if (strcmp(argv[i], "-num_servers") == 0) num_servers = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-num_aggregator") == 0) num_aggregator = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-lock_option") == 0) lock_option = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-num_lock") == 0) num_lock = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
-                if (strcmp(argv[i], "-max_delay") == 0) max_delay = static_cast<int>(strtol(argv[i + 1], &end_ptr, 10));
+                if (strcmp(argv[i], "-use_adagrad") == 0) use_adagrad = (atoi(argv[i + 1]) != 0);
+                if (strcmp(argv[i], "-is_pipeline") == 0) is_pipeline = (atoi(argv[i + 1]) != 0);
+                if (strcmp(argv[i], "-num_servers") == 0) num_servers = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-num_aggregator") == 0) num_aggregator = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-lock_option") == 0) lock_option = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-num_lock") == 0) num_lock = atoi(argv[i + 1]);
+                if (strcmp(argv[i], "-max_delay") == 0) max_delay = atoi(argv[i + 1]);
 				
             }
         }
@@ -140,10 +136,6 @@ namespace multiverso
         {
             table_ = nullptr;
         }
-        Sampler::~Sampler()
-        {
-            free(table_);
-        }
         //Set the negative-sampling distribution
         void Sampler::SetNegativeSamplingDistribution(Dictionary *dictionary)
         {
@@ -189,14 +181,10 @@ namespace multiverso
 
         std::string GetSystemTime()
         {
-            auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::stringstream ss;
-            std::tm *tf = nullptr;
-            localtime_s(tf, &t);
-            ss << std::put_time(tf, "%Y-%m-%d %H:%M:%S");
-            std::string ret;
-            ss >> ret;
-            return ret;
+            time_t t = time(0);
+            char tmp[128];
+            strftime(tmp, sizeof(tmp), "%Y%m%d%H%M%S", localtime(&t));
+            return std::string(tmp);
         }
 
         std::string g_log_suffix;   

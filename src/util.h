@@ -51,7 +51,6 @@ namespace multiverso
         {
         public:
             Sampler();
-            ~Sampler();
             /*!
             * \brief Set the negative-sampling distribution for every vocabulary
             * \param dictionary the train_file dictionary
