@@ -25,7 +25,7 @@ namespace multiverso
         //Set the white list for the dictionary
         void Dictionary::SetWhiteList(const std::vector<std::string>& whitelist)
         {
-            for (int i = 0; i < whitelist.size(); ++i)
+            for (unsigned int i = 0; i < whitelist.size(); ++i)
                 word_whitelist_.insert(whitelist[i]);
         }
         //Merge in the word_info which has the frequency over-threshold
@@ -94,17 +94,17 @@ namespace multiverso
         void Dictionary::LoadFromFile(const char* filename)
         {
             FILE* fid;
-            errno_t ret = fopen_s(&fid, filename, "r");
+            fid=fopen(filename, "r");
 
-            if (ret == 0)
+            if (fid)
             {
                 char sz_label[kMaxWordSize];
 
                 //while ((fid, "%s", sz_label, kMaxWordSize) != EOF)
-                while (fscanf_s(fid, "%s", sz_label, kMaxWordSize) != EOF)
+                while (fscanf(fid, "%s", sz_label, kMaxWordSize) != EOF)
                 {
                     int freq;
-                    fscanf_s(fid, "%d", &freq);       
+                    fscanf(fid, "%d", &freq);       
                     Insert(sz_label, freq);
                 }
             fclose(fid);
@@ -115,19 +115,19 @@ namespace multiverso
             unsigned int min_cnt, unsigned int letter_count)
         {
             FILE* fid;
-            errno_t ret = fopen_s(&fid, filename, "r");
-            if (ret == 0)
+            fid=fopen(filename, "r");
+            if (fid)
             {
                 char sz_label[kMaxWordSize] = { 0 };
                 //while (fscanf_s(fid, "%s", sz_label, kMaxWordSize) != EOF)
-                while (fscanf_s(fid, "%s", sz_label, kMaxWordSize) != EOF)
+                while (fscanf(fid, "%s", sz_label, kMaxWordSize) != EOF)
                 {
                     int64 freq;
-                    fscanf_s(fid, "%lld", &freq);
+                    fscanf(fid, "%lld", &freq);
                     if (freq < static_cast<int64>(min_cnt)) continue;
 
                     // Construct Tri-letter From word
-                    size_t len = strnlen_s(sz_label, kMaxWordSize);
+                    size_t len = strlen(sz_label);
                     if (len > kMaxWordSize)
                     {
                         multiverso::Log::Info("ignore super long term");
@@ -137,7 +137,7 @@ namespace multiverso
                     char tri_letters[kMaxWordSize + 2];
                     tri_letters[0] = '#';
                     int i = 0;
-                    for (i = 0; i < strnlen_s(sz_label, kMaxWordSize); i++)
+                    for (i = 0; i < strlen(sz_label); i++)
                     {
                         tri_letters[i + 1] = sz_label[i];
                     }
@@ -145,13 +145,13 @@ namespace multiverso
                     tri_letters[i + 1] = '#';
                     tri_letters[i + 2] = 0;
                     if (combine_) Insert(sz_label, freq);
-                    
-                    if (strnlen_s(tri_letters, kMaxWordSize+2) <= letter_count) {
+
+                    if (strlen(tri_letters) <= letter_count) {
                         Insert(tri_letters, freq);
                     }
                     else 
                     {
-                        for (i = 0; i <= strnlen_s(tri_letters, kMaxWordSize+2) - letter_count; ++i)
+                        for (i = 0; i <= strlen(tri_letters) - letter_count; ++i)
                         {
                             char tri_word[kMaxWordSize];
                             unsigned int j = 0;

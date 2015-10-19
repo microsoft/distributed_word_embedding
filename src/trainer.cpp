@@ -27,8 +27,8 @@ namespace multiverso
             {
                 //The log which recordes the begin and end time of TrainIteration()
                 char log_name[100];
-                sprintf_s(log_name, "trainer%s.txt", g_log_suffix.c_str());
-                fopen_s(&log_file_, log_name, "w");
+                sprintf(log_name, "trainer%s.txt", g_log_suffix.c_str());
+                log_file_ = fopen(log_name, "w");
             }
         }
 
@@ -40,7 +40,7 @@ namespace multiverso
 
             if (trainer_id_ == 0)
                 //Record the starting time of the Trainiteration  
-                fprintf_s(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
+                fprintf(log_file_, "%lf\n", (clock()) / (double)CLOCKS_PER_SEC);
 
             multiverso::Log::Info("Rank %d Train %d Begin TrainIteration%d ...\n",
                 process_id_, trainer_id_, train_count_);
@@ -115,25 +115,10 @@ namespace multiverso
             }
             multiverso::Log::Debug("Rank %d Train %d AddDeltaParameter end TrainIteration%d ...\n",
                 process_id_, trainer_id_, train_count_);
-            //If the data_block is the last one,Dump the input-embedding weights 
-            if (data->Type() == DataBlockType::Test && trainer_id_ == 0)
-            {
-                SaveEmbedding(option_->output_file, option_->output_binary);
-            }
-            //Dump the input-embedding to compute the accuracy
-            //Record the accuracy of each dumped-result which is from a Test::type datablock
-            if (data->Type() == DataBlockType::Test && process_id_ == 0 && trainer_id_ == 0)    
-            {
-                SaveEmbedding("tmp.bin", 1);
-                char s[128] = { 0 };
-                sprintf_s(s, "check.py tmp.bin %d >> records.txt", clock() / CLOCKS_PER_SEC);
-                system(s);
-                multiverso::Log::Info("The dumped-result has been tested");
-            }
-
+           
             if (trainer_id_ == 0)
             {
-                fprintf_s(log_file_, "%lf\n",
+                fprintf(log_file_, "%lf\n",
                     (clock()) / (double)CLOCKS_PER_SEC);
                 fflush(log_file_);
             }
@@ -281,11 +266,11 @@ namespace multiverso
             FILE* fid = nullptr;
             if (is_binary)
             {
-                fopen_s(&fid, file_path, "wb");
-                fprintf_s(fid, "%d %d\n", dictionary_->Size(),option_->embeding_size);
+                fid = fopen(file_path, "wb");
+                fprintf(fid, "%d %d\n", dictionary_->Size(),option_->embeding_size);
                 for (int i = 0; i < dictionary_->Size(); ++i)
                 {
-                    fprintf_s(fid, "%s ",
+                    fprintf(fid, "%s ",
                         dictionary_->GetWordInfo(i)->word.c_str());
 
                     multiverso::Row<real>& embedding = GetRow<real>(
@@ -297,24 +282,24 @@ namespace multiverso
                         fwrite(&tmp, sizeof(real), 1, fid);
                     }
 
-                    fprintf_s(fid, "\n");
+                    fprintf(fid, "\n");
                 }
 
                 fclose(fid);
             }
             else
             {
-                fopen_s(&fid, file_path, "wt");
-                fprintf_s(fid, "%d %d\n", dictionary_->Size(), option_->embeding_size);
+                fid = fopen(file_path, "wt");
+                fprintf(fid, "%d %d\n", dictionary_->Size(), option_->embeding_size);
                 for (int i = 0; i < dictionary_->Size(); ++i)
                 {
-                    fprintf_s(fid, "%s ", dictionary_->GetWordInfo(i)->word.c_str());
+                    fprintf(fid, "%s ", dictionary_->GetWordInfo(i)->word.c_str());
                     multiverso::Row<real>& embedding = GetRow<real>(kInputEmbeddingTableId, i);
 
                     for (int j = 0; j < option_->embeding_size; ++j)
-                        fprintf_s(fid, "%lf ", embedding.At(j));
+                        fprintf(fid, "%lf ", embedding.At(j));
 
-                    fprintf_s(fid, "\n");
+                    fprintf(fid, "\n");
                 }
 
                 fclose(fid);

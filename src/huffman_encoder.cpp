@@ -9,33 +9,28 @@ namespace multiverso
         {
             dict_ = nullptr;
         }
-        HuffmanEncoder::~HuffmanEncoder()
-        {
-            delete dict_;
-        }
 		
          //Save the word-huffmancode pair in file
         void HuffmanEncoder::Save2File(const char* filename)
         {
-            FILE* fid;
-            errno_t ret = fopen_s(&fid, filename, "w");
-            if (ret == 0)
+            FILE* fid = fopen(filename, "w");
+            if (fid)
             {
-                fprintf_s(fid, "%lld\n", hufflabel_info_.size());
+                fprintf(fid, "%lld\n", hufflabel_info_.size());
 
-                for (int i = 0; i < hufflabel_info_.size(); ++i)
+                for (unsigned i = 0; i < hufflabel_info_.size(); ++i)
                 {
                     auto info = hufflabel_info_[i];
                     const auto word = dict_->GetWordInfo(i);
-                    fprintf_s(fid, "%s %d", word->word.c_str(), info.codelen);
+                    fprintf(fid, "%s %d", word->word.c_str(), info.codelen);
 
                     for (int j = 0; j < info.codelen; ++j)
-                        fprintf_s(fid, " %d", info.code[j]);
+                        fprintf(fid, " %d", info.code[j]);
 
                     for (int j = 0; j < info.codelen; ++j)
-                        fprintf_s(fid, " %d", info.point[j]);
+                        fprintf(fid, " %d", info.point[j]);
 
-                    fprintf_s(fid, "\n");
+                    fprintf(fid, "\n");
                 }
 
                 fclose(fid);
@@ -52,11 +47,11 @@ namespace multiverso
             dict_ = new (std::nothrow)Dictionary();
             assert(dict_ != nullptr);
             FILE* fid;
-            errno_t ret = fopen_s(&fid, filename, "r");
-            if (ret == 0)
+            fid=fopen(filename, "r");
+            if (fid)
             {
                 int64 vocab_size;
-                fscanf_s(fid, "%lld", &vocab_size);
+                fscanf(fid, "%lld", &vocab_size);
                 hufflabel_info_.reserve(vocab_size);
                 hufflabel_info_.clear();
 
@@ -67,22 +62,22 @@ namespace multiverso
                     HuffLabelInfo info;
 
                     //fscanf_s(fid, "%s", sz_label, kMaxWordSize);
-                    fscanf_s(fid, "%s", sz_label, kMaxWordSize);
+                    fscanf(fid, "%s", sz_label, kMaxWordSize);
                     dict_->Insert(sz_label);
 
-                    fscanf_s(fid, "%d", &info.codelen);
+                    fscanf(fid, "%d", &info.codelen);
 
                     info.code.clear();
                     info.point.clear();
 
                     for (int j = 0; j < info.codelen; ++j)
                     {
-                        fscanf_s(fid, "%d", &tmp);
+                        fscanf(fid, "%d", &tmp);
                         info.code.push_back(tmp);
                     }
                     for (int j = 0; j < info.codelen; ++j)
                     {
-                        fscanf_s(fid, "%d", &tmp);
+                        fscanf(fid, "%d", &tmp);
                         info.point.push_back(tmp);
                     }
 
@@ -199,7 +194,7 @@ namespace multiverso
                 unsigned b = a, i = 0;
                 while (1)
                 {
-                    // assert(i < kMaxCodeLength);
+                    assert(i < kMaxCodeLength);
                     code[i] = binary[b];
                     point[i] = b;
                     i++;
@@ -230,18 +225,18 @@ namespace multiverso
         void HuffmanEncoder::BuildFromTermFrequency(const char* filename)
         {
             FILE* fid;
-            errno_t ret = fopen_s(&fid, filename, "r");
-            if (ret == 0)
+            fid=fopen(filename, "r");
+            if (fid)
             {
                 char sz_label[kMaxWordSize];
                 dict_ = new (std::nothrow)Dictionary();
                 assert(dict_ != nullptr);
                 //while (fscanf_s(fid, "%s", sz_label, kMaxWordSize) != EOF)
-                while (fscanf_s(fid,"%s",sz_label) != EOF)
+                while (fscanf(fid,"%s",sz_label) != EOF)
                 {
                     HuffLabelInfo info;
                     int freq;       
-                    fscanf_s(fid, "%d", &freq);
+                    fscanf(fid, "%d", &freq);
                     dict_->Insert(sz_label, freq);
                 }
                 fclose(fid);

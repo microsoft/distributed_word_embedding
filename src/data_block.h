@@ -21,7 +21,7 @@ namespace multiverso
         {
         public:
             std::vector <int> input_nodes, output_nodes;
-            DataBlock(){};
+            DataBlock(){}
             ~DataBlock();
 
             /*!

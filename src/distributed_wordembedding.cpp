@@ -55,7 +55,7 @@ namespace multiverso
                 config, &argc, &argv);
 
             char log_name[100];
-            sprintf_s(log_name, "log%s.txt", g_log_suffix.c_str());
+            sprintf(log_name, "log%s.txt", g_log_suffix.c_str());
             multiverso::Log::ResetLogFile(log_name);
             //Mark the node machine number
             process_id_ = multiverso::Multiverso::ProcessRank();
@@ -269,26 +269,8 @@ namespace multiverso
 
                 }
                 multiverso::Multiverso::EndClock();
-                //Dump input-embedding after every epoch
-                multiverso::Multiverso::BeginClock();
-                ++data_block_count;
-                DataBlock * data_block = new (std::nothrow)DataBlock();
-                assert(data_block != nullptr);
-                data_block->SetType(DataBlockType::Test);
-                PushDataBlock(datablock_queue, data_block);
-                multiverso::Log::Info("The epoch%d dumped-result will be tested\n", cur_epoch);
-                multiverso::Multiverso::EndClock();
             }
 
-
-            //Dump input-embedding weight
-            multiverso::Multiverso::BeginClock();
-            ++data_block_count;
-            DataBlock *data_block = new (std::nothrow)DataBlock();
-            assert(data_block != nullptr);
-            data_block->SetType(DataBlockType::Test);
-            PushDataBlock(datablock_queue, data_block);
-            multiverso::Multiverso::EndClock();
             multiverso::Log::Info("Rank %d Pushed %d datablocks\n",
                 process_id_, data_block_count);
 
@@ -361,9 +343,9 @@ namespace multiverso
             if (option_->negative_num)
                 sampler_->SetNegativeSamplingDistribution(dictionary_);
 
-            char *filename = new (std::nothrow)char[strnlen_s(option_->train_file, 1024) + 1];
+            char *filename = new (std::nothrow)char[strlen(option_->train_file) + 1];
             assert(filename != nullptr);
-            strcpy_s(filename, strnlen_s(option_->train_file, 1024) + 1, option_->train_file);
+            strcpy(filename, option_->train_file); 
             reader_ = new (std::nothrow)Reader(dictionary_, option_, sampler_, filename);
             assert(reader_ != nullptr);
             //Train with multiverso
@@ -396,7 +378,7 @@ namespace multiverso
 
                     if (ch == '\n')
                     {
-                        strcpy_s(word, kMaxWordSize, (char *)"</s>");
+                        strcpy(word, (char *)"</s>");
                         return true;
                     }
                     else
@@ -424,13 +406,13 @@ namespace multiverso
             char word[kMaxString];
             FILE* fid = nullptr;
             multiverso::Log::Info("vocab_file %s\n", opt->read_vocab_file);
-            if (opt->read_vocab_file != nullptr && strnlen_s(opt->read_vocab_file, 1024) > 0)
+            if (opt->read_vocab_file != nullptr && strlen(opt->read_vocab_file) > 0)
             {
                 multiverso::Log::Info("Begin to load vocabulary file [%s] ...\n",
                     opt->read_vocab_file);
-                fopen_s(&fid, opt->read_vocab_file, "r");
+                fid = fopen(opt->read_vocab_file, "r");
                 int word_freq;
-                while (fscanf_s(fid, "%s %d", word, &word_freq) != EOF)
+                while (fscanf(fid, "%s %d", word, &word_freq) != EOF)
                 {
                     dictionary->Insert(word, word_freq);
                 }
