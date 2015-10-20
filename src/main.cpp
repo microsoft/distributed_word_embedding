@@ -14,7 +14,7 @@
 #include "reader.h"
 #include "multiverso.h"
 #include "barrier.h"
-#include "Distributed_wordembedding.h"
+#include "distributed_wordembedding.h"
 #include "parameter_loader.h"
 #include "trainer.h"
 #include "word_embedding.h"

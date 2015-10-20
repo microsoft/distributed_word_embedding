@@ -205,7 +205,7 @@ namespace multiverso
             _stat64(filename, &info);
             return (int64)info.st_size;
 #else
-            struct  stat info
+            struct  stat info;
             stat(filename, &info);
             return(int64)info.st_size;
 #endif  

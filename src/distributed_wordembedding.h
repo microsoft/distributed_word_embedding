@@ -17,7 +17,7 @@
 #include <thread>
 #include <mutex>
 #include <functional>
-#include <sys\stat.h>
+#include <sys/stat.h>
 
 #include "util.h"
 #include "multiverso.h"

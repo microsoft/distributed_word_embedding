@@ -7,7 +7,7 @@
 
 #include "multiverso.h"
 #include "log.h"
-
+#include <cstdint>
 
 namespace multiverso
 {
@@ -20,8 +20,8 @@ namespace multiverso
         const multiverso::integer_t kSumGradient2IETableId = 3;
         const multiverso::integer_t kSumGradient2EOTableId = 4;
 
-        typedef long long int64;
-        typedef unsigned long long uint64;
+        typedef int64_t int64;
+        typedef uint64_t uint64;
         typedef float real;
 
         const int kTableSize = (int)1e8;
