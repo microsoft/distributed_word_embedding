@@ -331,6 +331,12 @@ namespace multiverso
             //Read the vocabulary file; create the dictionary
             //and huffman_encoder according opt
 			
+            if ((option_->hs == 1) && (option_->negative_num != 0))
+            {
+                multiverso::Log::Fatal("The Hierarchical Softmax and Negative Sampling is indefinite!\n");
+                exit(0);
+            }
+
             multiverso::Log::Info("Loading vocabulary ...\n");
             option_->total_words = LoadVocab(option_, dictionary_,
                 huffman_encoder_);
@@ -411,6 +417,11 @@ namespace multiverso
                 multiverso::Log::Info("Begin to load vocabulary file [%s] ...\n",
                     opt->read_vocab_file);
                 fid = fopen(opt->read_vocab_file, "r");
+                if (fid == nullptr)
+                {
+                    multiverso::Log::Fatal("Open vocab_file failed!\n");
+                    exit(1);
+                }
                 int word_freq;
                 while (fscanf(fid, "%s %d", word, &word_freq) != EOF)
                 {
