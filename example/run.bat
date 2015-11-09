@@ -1,7 +1,7 @@
 set size=300
-set text=enwiki2014
-set read_vocab="D:\Users\enwiki2014_vocab_m5.txt"
-set train_file="D:\Users\enwiki2014"
+set text=(train_file's name,e.g. enwiki2014)
+set read_vocab=(vocab's Directory string,e.g. "C:\Users\Leif\dataset\enwiki2014_vocab.txt")
+set train_file=(train_file's Directory string,e.g. "C:\Users\Leif\dataset\enwiki2014")
 set binary=1
 set cbow=1
 set alpha=0.01
