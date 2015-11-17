@@ -115,7 +115,12 @@ namespace multiverso
             }
             multiverso::Log::Debug("Rank %d Train %d AddDeltaParameter end TrainIteration%d ...\n",
                 process_id_, trainer_id_, train_count_);
-           
+
+			//If the data_block is the last one,Dump the input-embedding weights 
+			if (data->Type() == DataBlockType::Test && trainer_id_ == 0)
+			{
+				SaveEmbedding(option_->output_file, option_->output_binary);
+			}
             if (trainer_id_ == 0)
             {
                 fprintf(log_file_, "%lf\n",
