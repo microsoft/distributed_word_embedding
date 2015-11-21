@@ -49,6 +49,8 @@ namespace multiverso
         void WordEmbedding::Train(DataBlock *data_block, int index_start, int interval,
             int64& word_count, real* hidden_act, real* hidden_err)
         {
+            std::vector <int> negativesample(data_block->negativesample_pools.begin(),
+                data_block->negativesample_pools.end());
             for (int i = index_start; i < data_block->Size(); i += interval)
             {
                 int sentence_length;
@@ -59,7 +61,7 @@ namespace multiverso
                     word_count_deta, next_random);
 
                 this->Train(sentence, sentence_length,
-                    next_random, hidden_act, hidden_err);
+                    next_random, hidden_act, hidden_err, negativesample);
 
                 word_count += word_count_deta;
             }
@@ -77,10 +79,10 @@ namespace multiverso
         }
 
         void WordEmbedding::Train(int* sentence, int sentence_length,
-            uint64 next_random, real* hidden_act, real* hidden_err)
+            uint64 next_random, real* hidden_act, real* hidden_err, std::vector <int> &negativesample_pools)
         {
             ParseSentence(sentence, sentence_length,
-                next_random, hidden_act, hidden_err, &WordEmbedding::TrainSample);
+                next_random, hidden_act, hidden_err, &WordEmbedding::TrainSample, negativesample_pools);
         }
         //Train with forward direction and get  the input-hidden layer vector
         void WordEmbedding::FeedForward(std::vector<int>& input_nodes, real* hidden_act)
@@ -190,39 +192,54 @@ namespace multiverso
             }
         }
         //Parapare the parameter for the datablock
-        void WordEmbedding::PrepareParameter(DataBlock* data_block,
-            std::vector<int>& input_nodes,
-            std::vector<int>& output_nodes)
+        void WordEmbedding::PrepareParameter(DataBlock* data_block)
         {
-            input_nodes_.clear();
-            output_nodes_.clear();
-
             int sentence_length;
-            int64 word_count_deta;
+            int64 word_count_delta;
             int *sentence;
             uint64 next_random;
-            for (int i = 0; i < data_block->Size(); ++i)
+            if (option_->hs)
             {
-                data_block->GetSentence(i, sentence, sentence_length, word_count_deta,
-                    next_random);
-                ParseSentence(sentence, sentence_length, next_random,
-                    nullptr, nullptr, &WordEmbedding::DealPrepareParameter);
-            }
+                for (int i = 0; i < data_block->Size(); ++i)
+                {
+                    data_block->GetSentence(i, sentence, sentence_length, word_count_delta, next_random);
 
-            for (auto it = input_nodes_.begin(); it != input_nodes_.end(); it++)
-            {
-                input_nodes.push_back(*it);
-                assert((*it) >= 0);
-                assert((*it) < dictionary_size_);
+                    for (int sentence_position = 0; sentence_position < sentence_length; ++sentence_position)
+                    {
+                        data_block->input_nodes.insert(sentence[sentence_position]);
+                    }
+                }
+                for (auto input_node : data_block->input_nodes)
+                {
+                    auto info = huffmanEncoder_->GetLabelInfo(input_node);
+                    for (int d = 0; d < info->codelen; d++)
+                        data_block->output_nodes.insert(info->point[d]);
+                }
             }
-
-            for (auto it = output_nodes_.begin(); it != output_nodes_.end(); it++)
+            else
             {
-                output_nodes.push_back(*it);
-                assert((*it) >= 0);
-                assert((*it) < dictionary_size_);
-            }				
-    }
+                for (int i = 0; i < data_block->Size(); ++i)
+                {
+                    data_block->GetSentence(i, sentence, sentence_length, word_count_delta, next_random);
+
+                    for (int sentence_position = 0; sentence_position < sentence_length; ++sentence_position)
+                    {
+                        data_block->input_nodes.insert(sentence[sentence_position]);
+                    }
+                }
+                for (auto input_node : data_block->input_nodes)
+                {
+                    data_block->output_nodes.insert(input_node);
+                }
+                for (int d = 0; d < option_->negative_num * data_block->input_nodes.size(); d++)
+                {
+                    next_random = sampler_->GetNextRandom(next_random);
+                    int target = sampler_->NegativeSampling(next_random);
+                    data_block->output_nodes.insert(target);
+                    data_block->negativesample_pools.insert(target);
+                }
+            }
+        }
         //Copy the input&ouput nodes
         void WordEmbedding::DealPrepareParameter(std::vector<int>& input_nodes,
             std::vector<std::pair<int, int> >& output_nodes,
@@ -236,7 +253,7 @@ namespace multiverso
         //Parse the sentence and deepen into two branches
         void WordEmbedding::ParseSentence(int* sentence, int sentence_length,
             uint64 next_random, real* hidden_act, real* hidden_err,
-            FunctionType function)
+            FunctionType function, std::vector <int> &negativesample_pools)
         {
             if (sentence_length == 0)
                 return;
@@ -263,7 +280,7 @@ namespace multiverso
                         input_nodes.clear();
                         output_nodes.clear();
                         Parse(feat + feat_size - 1, 1, sentence[sentence_position],
-                            next_random, input_nodes, output_nodes);
+                            next_random, input_nodes, output_nodes, negativesample_pools);
                         (this->*function)(input_nodes, output_nodes, hidden_act, hidden_err);
                     }
                 }
@@ -273,7 +290,8 @@ namespace multiverso
                     input_nodes.clear();
                     output_nodes.clear();
                     Parse(feat, feat_size, sentence[sentence_position],
-                        next_random, input_nodes, output_nodes);
+                        next_random, input_nodes, output_nodes, negativesample_pools);
+
                     (this->*function)(input_nodes, output_nodes, hidden_act, hidden_err);
                 }
             }
@@ -281,7 +299,7 @@ namespace multiverso
         //Parse the windows's input&output nodes
         inline void WordEmbedding::Parse(int *feat, int feat_cnt, int word_idx,
             uint64 &next_random, std::vector<int>& input_nodes,
-            std::vector<std::pair<int, int> >& output_nodes)
+            std::vector<std::pair<int, int> >& output_nodes, std::vector <int> &negativesample_pools)
         {
             for (int i = 0; i < feat_cnt; ++i)
             {
@@ -301,8 +319,9 @@ namespace multiverso
                 for (int d = 0; d < option_->negative_num; d++)
                 {
                     next_random = sampler_->GetNextRandom(next_random);
-                    int target = sampler_->NegativeSampling(next_random);
-                    if (target == word_idx) continue;   
+                    int index = (next_random >> 8) % negativesample_pools.size();
+                    int target = negativesample_pools[index];
+                    if (target == word_idx) continue;
                     output_nodes.push_back(std::make_pair(target, 0));
                 }
             }

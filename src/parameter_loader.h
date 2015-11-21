@@ -43,9 +43,7 @@ namespace multiverso
             * \param input_nodes stores the input words'index
             * \param output_nodes stores the output words'index
             */
-            void RequestParameter(DataBlock *data_block,
-                std::vector<int>& input_nodes,
-                std::vector<int>& output_nodes);
+            void RequestParameter(DataBlock *data_block);
             //No copying allowed
             ParameterLoader(const ParameterLoader&);
             void operator=(const ParameterLoader&);

@@ -20,7 +20,8 @@ namespace multiverso
         class DataBlock : public multiverso::DataBlockBase
         {
         public:
-            std::vector <int> input_nodes, output_nodes;
+            std::unordered_set <int> input_nodes, output_nodes;
+            std::unordered_set <int> negativesample_pools;
             DataBlock(){}
             ~DataBlock();
 

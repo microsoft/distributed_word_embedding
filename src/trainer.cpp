@@ -48,16 +48,16 @@ namespace multiverso
             //Compute the total number of processes
             if (process_count_ == -1)
                 process_count_ = multiverso::Multiverso::TotalProcessCount();
-            //Get the input_nodes and output_nodes from data_block
-            //The input_nodes and output_nodes are stored by ParameterLoader
+           
             DataBlock *data = reinterpret_cast<DataBlock*>(data_block);
-            std::vector<int>& input_nodes = data->input_nodes;
-            std::vector<int>& output_nodes = data->output_nodes;
+            std::vector<int> input_nodes(data->input_nodes.begin(), data->input_nodes.end());
+            std::vector<int> output_nodes(data->output_nodes.begin(), data->output_nodes.end());
             //A trainer only copy or add apart of parameters
             //This trainer should copy or add the parameters according to
             //local_input_nodes and local_output_nodes 
             std::vector<int> local_input_nodes;
             std::vector<int> local_output_nodes;
+
             for (int i = trainer_id_; i < input_nodes.size(); i += option_->thread_cnt)
                 local_input_nodes.push_back(input_nodes[i]);
             for (int i = trainer_id_; i < output_nodes.size(); i += option_->thread_cnt)
@@ -121,6 +121,7 @@ namespace multiverso
 			{
 				SaveEmbedding(option_->output_file, option_->output_binary);
 			}
+
             if (trainer_id_ == 0)
             {
                 fprintf(log_file_, "%lf\n",

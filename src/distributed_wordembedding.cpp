@@ -280,6 +280,16 @@ namespace multiverso
 
                 }
                 multiverso::Multiverso::EndClock();
+
+                //Dump input-embedding weight
+                multiverso::Multiverso::BeginClock();
+                ++data_block_count;
+                DataBlock *data_block = new (std::nothrow)DataBlock();
+                assert(data_block != nullptr);
+                data_block->SetType(DataBlockType::Test);
+                PushDataBlock(datablock_queue, data_block);
+                multiverso::Multiverso::EndClock();
+
             }
 
 			//Dump input-embedding weight
