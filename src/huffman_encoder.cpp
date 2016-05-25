@@ -1,4 +1,3 @@
-#include <cstring>
 #include "huffman_encoder.h"
 
 namespace multiverso

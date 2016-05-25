@@ -1,7 +1,5 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_UTIL_H_
 #define DISTRIBUTED_WORD_EMBEDDING_UTIL_H_
-
-#pragma once
 /*!
 * file util.h
 * \brief Struct Option stores many general arguments in model
@@ -76,8 +74,11 @@ namespace multiverso
 		std::string GetSystemTime();
 		int64 GetFileSize(const char *filename);
 		bool ReadWord(char *word, FILE *fin);
+		void InitExpTable();
 
 		extern std::string g_log_suffix;
+		extern real* expTable;
+
 	}
 }
 #endif

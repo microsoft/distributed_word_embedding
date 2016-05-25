@@ -1,10 +1,9 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_DICTIONARY_H_
 #define DISTRIBUTED_WORD_EMBEDDING_DICTIONARY_H_
-
-#pragma once
 /*!
 * \brief Class dictionary stores the vocabulary and it's frequency
 */
+#include <cstring>
 
 #include <unordered_map>
 #include <unordered_set>

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <sstream>
 #include <new>
+//#include <vld.h> 
 
 #include "multiverso/util/log.h"
 #include "multiverso/multiverso.h"
@@ -29,6 +30,7 @@ int main(int argc, char *argv[])
 		Distributed_wordembedding *ptr = new (std::nothrow)Distributed_wordembedding();
 		assert(ptr != nullptr);
 		ptr->Run(argc, argv);
+		delete ptr;
 	}
 	catch (std::bad_alloc &memExp)
 	{
@@ -38,5 +40,7 @@ int main(int argc, char *argv[])
 	{
 		multiverso::Log::Info("Something wrong with other reason!\n");
 	}
+	system("PAUSE");
 	return 0;
 }
+

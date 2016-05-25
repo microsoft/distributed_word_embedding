@@ -52,6 +52,12 @@ namespace multiverso
 		{
 			delete[] weight_IE_;
 			delete[] weight_EO_;
+
+			if (is_use_adagrad_)
+			{
+				delete sum_gradient2_IE_;
+				delete sum_gradient2_EO_;
+			}
 		}
 		
 		//Set the weight of input-embedding vector
@@ -104,9 +110,11 @@ namespace multiverso
 			assert(weight_IE_ != nullptr);
 			weight_EO_ = new (std::nothrow)real*[dictionary_size_];
 			assert(weight_EO_ != nullptr);
+			is_use_adagrad_ = is_use_adagrad;
 
-			if (is_use_adagrad)
+			if (is_use_adagrad_)
 			{
+				
 				sum_gradient2_IE_ = new (std::nothrow)real*[dictionary_size_];
 				sum_gradient2_EO_ = new (std::nothrow)real*[dictionary_size_];
 				assert(sum_gradient2_IE_ != nullptr);
@@ -137,6 +145,14 @@ namespace multiverso
 				}
 				std::cout << std::endl;
 			}
+		}
+
+		void DataBlock::SetLastFlag(){
+			is_last_one_ = true;
+		}
+
+		bool DataBlock::isLast(){
+			return is_last_one_;
 		}
 	}
 }

@@ -1,15 +1,9 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_TRAINER_H_
 #define DISTRIBUTED_WORD_EMBEDDING_TRAINER_H_
-
-#pragma once
-
 /*!
 * file trainer.h
 * \brief Class Trainer trains the model by every trainiteration
 */
-
-#include <thread>
-#include <chrono>
 
 #include "multiverso/multiverso.h"
 #include "multiverso/updater/updater.h"
@@ -32,8 +26,7 @@ namespace multiverso
 		public:
 			int64 word_count;
 			Trainer(int trainer_id, Option *option,
-				Dictionary* dictionary, WordEmbedding* WordEmbedding,
-				MemoryManager* memory_mamanger);
+				Dictionary* dictionary, WordEmbedding* WordEmbedding);
 			/*!
 			* /brief Train one datablock
 			*/
@@ -50,7 +43,6 @@ namespace multiverso
 			int train_count_;
 			clock_t start_, now_;
 			FILE* log_file_;
-			MemoryManager* memory_mamanger_;
 
 			//No copying allowed
 			Trainer(const Trainer&);

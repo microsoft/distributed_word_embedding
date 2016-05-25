@@ -1,8 +1,6 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_DATA_BLOCK_H_
 #define DISTRIBUTED_WORD_EMBEDDING_DATA_BLOCK_H_
 
-#pragma once
-
 /*!
 * \file data_block.h
 * \brief Class DataBlock is to store the necessary data for trainer and param_loader
@@ -81,6 +79,9 @@ namespace multiverso
 
 			void PrintDataBlock(int embedding_size);
 
+			void SetLastFlag();
+			bool isLast();
+
 		private:
 			/*!
 			* \brief The information of sentences
@@ -112,11 +113,13 @@ namespace multiverso
 			/*! \brief Store the information of sentences*/
 			std::vector <Sentence> sentences_;
 
-			real** weight_IE_;
-			real** weight_EO_;
+			real** weight_IE_=nullptr;
+			real** weight_EO_ = nullptr;
 
-			real** sum_gradient2_IE_;
-			real** sum_gradient2_EO_;
+			real** sum_gradient2_IE_ = nullptr;
+			real** sum_gradient2_EO_ = nullptr;
+			bool is_use_adagrad_ = false;
+			bool is_last_one_ = false;
 
 			// No copying allowed
 			DataBlock(const DataBlock&);

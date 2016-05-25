@@ -1,7 +1,5 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_WORD_EMBEDDING_H_
 #define DISTRIBUTED_WORD_EMBEDDING_WORD_EMBEDDING_H_
-
-#pragma once
 /*!
 * file WordEmbedding.h
 * \brief Class WordEmbedding includes some functions and parameters about TrainNN
@@ -58,9 +56,15 @@ namespace multiverso
 			* \brief Update the learning rate
 			*/
 			void UpdateLearningRate();
-
+			/*!
+			* \brief Set the input(output)-embeddding weight
+			*/
 			void SetWeightIE(int input_node_id, real* ptr);
 			void SetWeightEO(int output_node_id, real* ptr);
+
+			/*!
+			* \brief Return the parametertable value
+			*/
 			real* GetWeightIE(int input_node_id);
 			real* GetWeightEO(int output_node_id);
 
@@ -70,14 +74,14 @@ namespace multiverso
 			void SetSumGradient2EO(int output_node_id, real* ptr);
 
 		private:
-			Option *option_;
-			Dictionary *dictionary_;
-			HuffmanEncoder *huffmanEncoder_;
-			Sampler *sampler_;
+			Option *option_ = nullptr;
+			Dictionary *dictionary_ = nullptr;
+			HuffmanEncoder *huffmanEncoder_ = nullptr;
+			Sampler *sampler_ = nullptr;
 			std::unordered_set<int> input_nodes_, output_nodes_;
 			int dictionary_size_;
 
-			DataBlock * data_block_;
+			DataBlock * data_block_ = nullptr;
 
 			typedef void(WordEmbedding::*FunctionType)(std::vector<int>& input_nodes,
 				std::vector<std::pair<int, int> >& output_nodes,
@@ -113,12 +117,7 @@ namespace multiverso
 			*/
 			void BPOutputLayer(int label, int word_idx, real* classifier,
 				real* hidden_act, real* hidden_err);
-			/*!
-			* \brief Copy the input_nodes&output_nodes to WordEmbedding private set
-			*/
-			void DealPrepareParameter(std::vector<int>& input_nodes,
-				std::vector<std::pair<int, int> >& output_nodes,
-				void *hidden_act, void *hidden_err);
+
 			/*!
 			* \brief Train a window sample and update the
 			* \input-embedding&output-embedding vectors

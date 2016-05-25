@@ -1,8 +1,5 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_READER_H_
 #define DISTRIBUTED_WORD_EMBEDDING_READER_H_
-
-#pragma once
-
 /*!
 * file reader.h
 * \brief Class Reader helps the function Loaddata to fill the datablock

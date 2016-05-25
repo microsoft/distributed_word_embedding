@@ -1,8 +1,5 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_MEMORY_MANAGER_H_
 #define DISTRIBUTED_WORD_EMBEDDING_MEMORY_MANAGER_H_
-
-#pragma once
-
 /*!
 * file memory_manager.h
 * \brief Class MemoryManager creates and allocates memory for the local parameter which is needed by the datablock training.

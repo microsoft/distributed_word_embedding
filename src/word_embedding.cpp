@@ -14,6 +14,7 @@ namespace multiverso
 			dictionary_size_ = dictionary_size;
 			learning_rate = option_->init_learning_rate;
 			data_block_ = nullptr;
+			//InitExpTable();
 		}
 
 		WordEmbedding::~WordEmbedding()
@@ -90,7 +91,15 @@ namespace multiverso
 			//Propagate hidden -> output
 			for (int j = 0; j < option_->embeding_size; ++j)
 				f += hidden_act[j] * classifier[j];
+
 			f = 1 / (1 + exp(-f));
+			
+			/*
+			if (f >-kMaxExp && f < kMaxExp){
+				f = expTable[(int)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
+			}
+			*/
+			
 			real error = (1 - label - f);
 			//Propagate errors output -> hidden
 			for (int j = 0; j < option_->embeding_size; ++j)
@@ -129,6 +138,7 @@ namespace multiverso
 			assert(hidden_err != nullptr);
 			memset(hidden_act, 0, option_->embeding_size * sizeof(real));
 			memset(hidden_err, 0, option_->embeding_size * sizeof(real));
+
 			FeedForward(input_nodes, hidden_act);
 
 			for (int i = 0; i < output_nodes.size(); ++i)
@@ -221,16 +231,7 @@ namespace multiverso
 				}
 			}
 		}
-		//Copy the input&ouput nodes
-		void WordEmbedding::DealPrepareParameter(std::vector<int>& input_nodes,
-			std::vector<std::pair<int, int> >& output_nodes,
-			void *hidden_act, void *hidden_err)
-		{
-			for (int i = 0; i < input_nodes.size(); ++i)
-				input_nodes_.insert(input_nodes[i]);
-			for (int i = 0; i < output_nodes.size(); ++i)
-				output_nodes_.insert(output_nodes[i].first);
-		}
+
 		//Parse the sentence and deepen into two branches
 		void WordEmbedding::ParseSentence(int* sentence, int sentence_length,
 			uint64 next_random, real* hidden_act, real* hidden_err,
@@ -282,6 +283,7 @@ namespace multiverso
 			uint64 &next_random, std::vector<int>& input_nodes,
 			std::vector<std::pair<int, int> >& output_nodes, std::vector <int> &negativesample_pools)
 		{
+
 			for (int i = 0; i < feat_cnt; ++i)
 			{
 				input_nodes.push_back(feat[i]);

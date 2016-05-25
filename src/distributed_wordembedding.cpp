@@ -4,38 +4,10 @@ namespace multiverso
 {
 	namespace wordembedding
 	{
-		template <typename T>
-		void filler(std::vector<T> &v){
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_real_distribution<float> dis(-1.0, 1.0);
-
-			for (int i = 0; i<v.size(); i++)
-			{
-				v[i] = dis(gen);
-			}
-		}
-
-		void Distributed_wordembedding::PrepareParameterTables(Option *opt, Dictionary *dictionary){
-			worker_input_table_ = new MatrixWorkerTable<float>(dictionary->Size(), opt->embeding_size);
-			worker_output_table_ = new MatrixWorkerTable<float>(dictionary->Size(), opt->embeding_size);
-			server_input_table_ = new MatrixServerTable<float>(dictionary->Size(), opt->embeding_size, &filler);
-			server_output_table_ = new MatrixServerTable<float>(dictionary->Size(), opt->embeding_size, &filler);
-
-			if (option_->use_adagrad){
-				worker_input_gradient_table_ = new MatrixWorkerTable<float>(dictionary->Size(), opt->embeding_size);
-				worker_output_gradient_table_ = new MatrixWorkerTable<float>(dictionary->Size(), opt->embeding_size);
-				server_input_gradient_table_ = new MatrixServerTable<float>(dictionary->Size(), opt->embeding_size);
-				server_output_gradient_table_ = new MatrixServerTable<float>(dictionary->Size(), opt->embeding_size);
-			}
-		}
-
 		void Distributed_wordembedding::LoadOneBlock(DataBlock *data_block,
 			Reader *reader, int64 size)
 		{
 			clock_t start = clock();
-			
-			//multiverso::Log::Info("Beigin Load One Block.\n");
 
 			data_block->ClearSentences();
 			reader->ResetSize(size);
@@ -59,7 +31,7 @@ namespace multiverso
 				}
 			}
 
-			multiverso::Log::Info("LoadOneDataBlockTime:%lfs\n",
+			multiverso::Log::Info("Rank %d LoadOneDataBlockTime:%lfs\n",process_id_,
 				(clock() - start) / (double)CLOCKS_PER_SEC);
 		}
 
@@ -72,10 +44,10 @@ namespace multiverso
 				for (int64 cur = 0; cur < file_size; cur += option_->data_block_size)
 				{
 					DataBlock *data_block = new (std::nothrow)DataBlock();
-					assert(data_block!=nullptr);
+					assert(data_block != nullptr);
 					LoadOneBlock(data_block, reader, option_->data_block_size);
 
-					multiverso::Log::Info("Load the %d Data Block\n", data_block_count);
+					//multiverso::Log::Info("Rank %d Load Thread load the %d Data Block\n",process_id_,data_block_count);
 					data_block_count++;
 
 					std::unique_lock<std::mutex> lock(block_queue->mtx);
@@ -84,6 +56,14 @@ namespace multiverso
 					lock.unlock();
 				}
 			}
+
+			DataBlock *data_block = new (std::nothrow)DataBlock();
+			assert(data_block != nullptr);
+			data_block->SetLastFlag();
+			std::unique_lock<std::mutex> lock(block_queue->mtx);
+			(block_queue->queues).push(data_block);
+			(block_queue->repo_not_empty).notify_all();
+			lock.unlock();
 		}
 
 		DataBlock* Distributed_wordembedding::GetDataFromQueue(BlockQueue *block_queue){
@@ -104,38 +84,110 @@ namespace multiverso
 		DataBlock* Distributed_wordembedding::GetBlockAndPrepareParameter(BlockQueue *block_queue_){
 			DataBlock* data_block = GetDataFromQueue(block_queue_);
 			if (data_block->Size() == 0){
-				return nullptr;
+				return data_block;
 			}
-			data_block->MallocMemory(dictionary_->Size(),option_);
+			data_block->MallocMemory(dictionary_->Size(), option_);
 			PrepareData(data_block);
-			RequestParameter(data_block);
+			communicator_->RequestParameter(data_block);
+			GetAllWordCount();
 			return data_block;
 		}
 
-		
-		HRESULT Distributed_wordembedding::TrainNeuralNetwork(){
+		void Distributed_wordembedding::GetAllWordCount(){
+			WordEmbedding_->word_count_actual = communicator_->GetWordCount();
+			WordEmbedding_->UpdateLearningRate();
+			//multiverso::Log::Info("Get all word count done.,word count actual is %d\n", WordEmbedding_->word_count_actual);
+		}
+
+		void Distributed_wordembedding::AddDeltaWordCount(){
+			int64 temp_word_count = communicator_->GetWordCount();
+			temp_word_count = WordEmbedding_->word_count_actual - temp_word_count;
+			communicator_->AddWordCount(temp_word_count);
+			//multiverso::Log::Info("Add word count done.word count delta is %d\n", WordEmbedding_->word_count_actual);
+		}
+
+		void Distributed_wordembedding::StartWordCount()
+		{
+			multiverso::Log::Info("Rank %d Start word count thread\n.",process_id_);
+			int64 total_word_count = 0, sum = 0;
+			while (is_running_)
+			{
+				sum = 0;
+				for (int i = 0; i < trainers_.size(); ++i)
+					sum += trainers_[i]->word_count;
+
+				if (sum < 10000 + total_word_count)
+				{
+					std::chrono::milliseconds dura(20);
+					std::this_thread::sleep_for(dura);
+				}
+				else
+				{
+					WordEmbedding_->word_count_actual += sum - total_word_count;
+					WordEmbedding_->UpdateLearningRate();
+					total_word_count = sum;
+					if (!option_->use_adagrad)
+					{
+						/*
+						multiverso::Log::Info("Rank %d Alpha: %lf Progress: %.2lf%% WordCountActual: %lld Words/thread/second %lfk\n",
+							multiverso::MV_Rank(), WordEmbedding_->learning_rate,
+							WordEmbedding_->word_count_actual / ((double)option_->total_words * option_->epoch + 1) * 100,
+							WordEmbedding_->word_count_actual,
+							total_word_count / ((double)option_->thread_cnt * (clock() - start_) / CLOCKS_PER_SEC * 1000.0));
+							*/
+					}
+					else
+					{
+						/*
+						multiverso::Log::Info("Rank %d Progress: %.2lf%% WordCountActual: %lld Words/thread/second %lfk\n",
+							multiverso::MV_Rank(),
+						WordEmbedding_->word_count_actual / ((double)option_->total_words * option_->epoch + 1) * 100,
+							WordEmbedding_->word_count_actual,
+							total_word_count / ((double)option_->thread_cnt * (clock() - start_) / CLOCKS_PER_SEC * 1000.0));
+						*/
+					}
+				}
+			}
+
+			//Add the left word_count to the WordEmbedding
+			WordEmbedding_->word_count_actual += sum - total_word_count;
+			WordEmbedding_->UpdateLearningRate();
+		}
+
+		void Distributed_wordembedding::StartCollectWordcountThread()
+		{
+			is_running_ = true;
+			collect_wordcount_thread_ = std::thread(
+				&Distributed_wordembedding::StartWordCount, this);
+		}
+
+		void Distributed_wordembedding::StopCollectWordcountThread()
+		{
+			is_running_ = false;
+			collect_wordcount_thread_.join();
+		}
+
+		void Distributed_wordembedding::TrainNeuralNetwork(){
 			int64 file_size = GetFileSize(option_->train_file);
-			multiverso::Log::Info("train-file-size:%lld, data_block_size:%lld\n",
+			multiverso::Log::Info("train-file-size:%lld, data_block_size:%lld.\n",
 				file_size, option_->data_block_size);
 
 			block_queue_ = new BlockQueue();
-			memory_mamanger_ = new MemoryManager(option_->embeding_size);
+			load_data_thread_ = std::thread(&Distributed_wordembedding::StartLoadDataThread, this, block_queue_, reader_, file_size);
 
-			std::vector<Trainer*> trainers;
 			WordEmbedding_ = new WordEmbedding(option_, huffman_encoder_,
 				sampler_, dictionary_->Size());
-			assert(WordEmbedding_!= nullptr);
+			assert(WordEmbedding_ != nullptr);
 
 			for (int i = 0; i < option_->thread_cnt; ++i)
 			{
-				trainers.push_back(new (std::nothrow) Trainer(i, option_, dictionary_, WordEmbedding_, memory_mamanger_));
-				assert(trainers[i] != nullptr);
+				trainers_.push_back(new (std::nothrow) Trainer(i, option_, dictionary_, WordEmbedding_));
+				assert(trainers_[i] != nullptr);
 			}
 
-			load_data_thread_ = std::thread(&Distributed_wordembedding::StartLoadDataThread, this, block_queue_, reader_, file_size);
-			load_data_thread_.detach();
-			//load_data_thread_.join();
+			StartCollectWordcountThread();
 
+			start_ = clock();
 			int data_block_count = 0;
 			DataBlock *next_block = nullptr;
 			DataBlock *data_block = nullptr;
@@ -143,7 +195,7 @@ namespace multiverso
 			data_block = GetBlockAndPrepareParameter(block_queue_);
 			if (data_block == nullptr){
 				multiverso::Log::Info("Please Change the Bigger Block Size.\n");
-				return E_INVALIDARG;
+				return;
 			}
 			data_block_count++;
 
@@ -151,338 +203,184 @@ namespace multiverso
 			for (int cur_epoch = 0; cur_epoch < option_->epoch; ++cur_epoch)
 			{
 				clock_t start_epoch = clock();
-				for (int64 cur = 0; cur < all; cur ++)
+				for (int64 cur = 0; cur < all; ++cur)
 				{
 					clock_t start_block = clock();
-					bool flag = (cur != (all - 1) || (cur_epoch != (option_->epoch - 1)));
+
 					if (option_->is_pipeline == false){
-						if (data_block != nullptr){
-							multiverso::Log::Info("Get the %d Data Block and Request done.\n", data_block_count);
-							data_block_count++;
-
-							#pragma omp parallel for num_threads(option_->thread_cnt)
-							for (int i = 0; i < option_->thread_cnt; ++i){
-								trainers[i]->TrainIteration(data_block);
-							}
-
-							AddDeltaParameter(data_block);
-							delete data_block;
+						#pragma omp parallel for num_threads(option_->thread_cnt)
+						for (int i = 0; i < option_->thread_cnt; ++i){
+							trainers_[i]->TrainIteration(data_block);
 						}
-						if (flag){
-							data_block = GetBlockAndPrepareParameter(block_queue_);
-						}
+
+						communicator_->AddDeltaParameter(data_block);
+						delete data_block;
+
+						data_block = GetBlockAndPrepareParameter(block_queue_);
+						data_block_count++;
+						multiverso::Log::Info("Get the %d Data Block and Request done.\n", data_block_count);
 					}
 					else{
-						bool flag = (cur != (all - 1) || (cur_epoch != (option_->epoch - 1)));
-						if (data_block != nullptr){
-							#pragma omp parallel num_threads(option_->thread_cnt+1)
-							{
-								if (omp_get_thread_num() == option_->thread_cnt){
-									if (flag){
-										next_block = GetBlockAndPrepareParameter(block_queue_);
-									}
-								}
-								else{
-									//for (int i = 0; i < option_->thread_cnt; ++i){
-									trainers[omp_get_thread_num()]->TrainIteration(data_block);
-									//}
-								}
+						#pragma omp parallel num_threads(option_->thread_cnt+1)
+						{
+							if (omp_get_thread_num() == option_->thread_cnt){
+								next_block = GetBlockAndPrepareParameter(block_queue_);
+								data_block_count++;
 							}
-
-							AddDeltaParameter(data_block);
-							delete data_block;
-							//(if next_block == nullptr) then data_block is null,we not run next block
-							data_block = next_block;
-							next_block = nullptr;
+							else{
+								trainers_[omp_get_thread_num()]->TrainIteration(data_block);
+							}
 						}
+
+						communicator_->AddDeltaParameter(data_block);
+						delete data_block;
+
+						//(if next_block == nullptr) then data_block is null,we not run next block
+						data_block = next_block;
+						next_block = nullptr;
 					}
 
-					multiverso::Log::Info("Dealing one block time:%lfs\n",
+					multiverso::Log::Info("Rank %d Dealing one block time:%lfs\n", process_id_,
 						(clock() - start_block) / (double)CLOCKS_PER_SEC);
 				}
 
-				multiverso::Log::Info("Dealing one epoch time:%lfs\n",
+				multiverso::Log::Info("Rank %d Dealing %d epoch time:%lfs\n", process_id_, cur_epoch,
 					(clock() - start_epoch) / (double)CLOCKS_PER_SEC);
+
+				if (process_id_ == 0){
+					SaveEmbedding(ChangeFileName(option_->output_file, cur_epoch), option_->output_binary);
+				}
 			}
 
-			multiverso::Log::Info("Rank %d Pushed %d datablocks\n",
-				process_id_, data_block_count);
+			multiverso::Log::Info("Rank %d Finish Traning %d Block.\n",process_id_, data_block_count);
 
-			SaveEmbedding(option_->output_file, option_->output_binary);
+			StopCollectWordcountThread();
+			//multiverso::Log::Info("Rank %d stop the word count thread.\n", process_id_);
+			load_data_thread_.join();
+			//multiverso::Log::Info("Rank %d stop the load data thread.\n", process_id_);
+			assert(data_block->isLast() == true);
+			delete data_block;
 
-			if (option_->is_pipeline == true){
-				delete next_block;
-			}
-			delete memory_mamanger_;
 			delete WordEmbedding_;
 			delete block_queue_;
-			for (auto trainer : trainers)
+			for (auto trainer : trainers_)
 			{
 				delete trainer;
 			}
+			//multiverso::Log::Info("Rank %d delete all pointers.\n",process_id_);
 		}
 
-		void Distributed_wordembedding::SaveEmbedding(const char *file_path, bool is_binary)
-		{
-			FILE* fid = nullptr;
-			real* row = new real[option_->embeding_size]();
-			clock_t start = clock();
-			if (is_binary)
-			{
-				fid = fopen(file_path, "wb");
-				fprintf(fid, "%d %d\n", dictionary_->Size(), option_->embeding_size);
-				for (int i = 0; i < dictionary_->Size(); ++i)
-				{
-					fprintf(fid, "%s ",
-						dictionary_->GetWordInfo(i)->word.c_str());
-					worker_input_table_->Get(i, row, option_->embeding_size);
+		const char* Distributed_wordembedding::ChangeFileName(const char *file_path, int iteration){
+			char * temp = new char[strlen(file_path)+1];
+			strcpy(temp,file_path);
+			std::string c_iteration = "_"+std::to_string(iteration);
+			char const *p_iteration = c_iteration.c_str();
+			return strcat(temp, p_iteration);
+		}
 
-					for (int j = 0; j < option_->embeding_size; ++j)
-					{
-						real tmp = row[j];
+		void Distributed_wordembedding::SaveEmbedding(const char *file_path, bool is_binary){
+			clock_t start = clock();
+
+			const int batch = 50000;
+			int epoch = dictionary_->Size() / batch;
+			int left = dictionary_->Size() % batch;
+			int base = 0;
+			std::vector<real*> blocks;
+			std::vector<int> nodes;
+
+			FILE* fid = nullptr;
+			fid = (is_binary == true) ? fid = fopen(file_path, "wb") : fid = fopen(file_path, "wt");
+			fprintf(fid, "%d %d\n", dictionary_->Size(), option_->embeding_size);
+
+			for (int i = 0; i < epoch; ++i){
+				for (int j = 0; j < batch; ++j){
+					nodes.push_back(base + j);
+				}
+
+				communicator_->RequestBlocks(batch, blocks);
+				communicator_->GetWorkerTableRows(nodes, blocks,option_->embeding_size);
+				WriteToFile(is_binary, blocks,fid);
+				communicator_->ReturnBlocks(blocks);
+
+				blocks.clear();
+				nodes.clear();
+				base = (i + 1)*batch;
+			}
+
+			if (left > 0){
+				for (int j = 0; j <left; ++j){
+					nodes.push_back(base + j);
+				}
+				communicator_->RequestBlocks(left, blocks);
+				communicator_->GetWorkerTableRows(nodes, blocks, option_->embeding_size);
+				WriteToFile(is_binary, blocks, fid);
+				communicator_->ReturnBlocks(blocks);
+			}
+
+			fclose(fid);
+			multiverso::Log::Info("Rank % dSaving Embedding time:%lfs\n", process_id_,
+				(clock() - start) / (double)CLOCKS_PER_SEC);
+		}
+
+		void Distributed_wordembedding::WriteToFile(bool is_binary, std::vector<real*> &blocks, FILE* fid){
+			for (int i = 0; i < blocks.size(); ++i)
+			{
+				fprintf(fid, "%s ", dictionary_->GetWordInfo(i)->word.c_str());
+				for (int j = 0; j < option_->embeding_size; ++j)
+				{
+					if (is_binary){
+						real tmp = blocks[i][j];
 						fwrite(&tmp, sizeof(real), 1, fid);
 					}
-
-					fprintf(fid, "\n");
+					else{
+						fprintf(fid, "%lf ", blocks[i][j]);
+					}
 				}
-
-				fclose(fid);
+				fprintf(fid, "\n");
 			}
-			else
-			{
-				fid = fopen(file_path, "wt");
-				fprintf(fid, "%d %d\n", dictionary_->Size(), option_->embeding_size);
-
-				for (int i = 0; i < dictionary_->Size(); ++i)
-				{
-					fprintf(fid, "%s ", dictionary_->GetWordInfo(i)->word.c_str());
-					worker_input_table_->Get(i, row, option_->embeding_size);
-
-					for (int j = 0; j < option_->embeding_size; ++j)
-						fprintf(fid, "%lf ", row[j]);
-
-					fprintf(fid, "\n");
-				}
-
-				fclose(fid);
-			}
-
-			multiverso::Log::Info("Saving Embedding time:%lfs\n",
-				(clock() - start) / (double)CLOCKS_PER_SEC);
-			delete[]row;
 		}
 
 		void Distributed_wordembedding::PrepareData(DataBlock *data_block){
 			clock_t start = clock();
 			WordEmbedding_->PrepareData(data_block);
-			multiverso::Log::Info("Prepare data time:%lfs\n",
+			multiverso::Log::Info("Rank %d Prepare data time:%lfs.\n",process_id_,
 				(clock() - start) / (double)CLOCKS_PER_SEC);
-			multiverso::Log::Info("Rank %d Prepare data done\n", multiverso::MV_Rank());
-		}
-
-		void Distributed_wordembedding::AddRows(MatrixWorkerTable<float>* table_, std::vector<int> row_ids, std::vector<real *> ptrs, int size){
-			AddOption option;
-			table_->Add(row_ids, ptrs, size, &option);
-		}
-
-		void Distributed_wordembedding::GetRows(MatrixWorkerTable<float>* table_, std::vector<int> row_ids, std::vector<real *> ptrs, int size){
-			table_->Get(row_ids, ptrs, size);
-		}
-
-		void Distributed_wordembedding::RequestParameter(DataBlock *data_block)
-		{
-			clock_t start = clock();
-
-			std::vector<int> input_nodes(data_block->input_nodes.begin(), data_block->input_nodes.end());
-			std::vector<int> output_nodes(data_block->output_nodes.begin(), data_block->output_nodes.end());
-
-			std::vector<real*> input_blocks;
-			std::vector<real*> output_blocks;
-
-			//Request blocks to store parameters
-			memory_mamanger_->RequestBlocks(input_nodes.size(), input_blocks);
-			memory_mamanger_->RequestBlocks(output_nodes.size(), output_blocks);
-			assert(input_blocks.size() == input_nodes.size());
-			assert(output_blocks.size() == output_nodes.size());
-
-			GetRows(worker_input_table_, input_nodes, input_blocks, option_->embeding_size);
-			GetRows(worker_output_table_, output_nodes, output_blocks, option_->embeding_size);
-
-			for (int i = 0; i < input_nodes.size(); ++i)
-			{
-				data_block->SetWeightIE(input_nodes[i], input_blocks[i]);
-			}
-
-			for (int i = 0; i < output_nodes.size(); ++i)
-			{
-				data_block->SetWeightEO(output_nodes[i], output_blocks[i]);
-			}
-
-			if (option_->use_adagrad)
-			{
-				std::vector<real*> input_gradient_blocks;
-				std::vector<real*> output_gradient_blocks;
-
-				memory_mamanger_->RequestBlocks(input_nodes.size(), input_gradient_blocks);
-				memory_mamanger_->RequestBlocks(output_nodes.size(), output_gradient_blocks);
-
-				GetRows(worker_input_gradient_table_, input_nodes, input_gradient_blocks, option_->embeding_size);
-				GetRows(worker_output_gradient_table_, output_nodes, output_gradient_blocks, option_->embeding_size);
-
-				//Copy input-embedding sum of squarsh of gradient 
-				for (int i = 0; i < input_nodes.size(); ++i)
-				{
-					data_block->SetSumGradient2IE(input_nodes[i], input_gradient_blocks[i]);
-				}
-
-				//Copy embedding-output sum of squarsh of gradient 
-				for (int i = 0; i < output_nodes.size(); ++i)
-				{
-					data_block->SetSumGradient2EO(output_nodes[i], output_gradient_blocks[i]);
-				}
-			}
-
-			multiverso::Log::Info("Request Parameters time:%lfs\n",
-				(clock() - start) / (double)CLOCKS_PER_SEC);
-			multiverso::Log::Info("Rank %d Request Parameter done\n", process_id_);
-		}
-
-		//Add delta to local buffer and send it to the parameter sever
-		void Distributed_wordembedding::AddDeltaParameter(DataBlock *data_block)
-		{
-			clock_t start = clock();
-
-			std::vector<int> input_nodes(data_block->input_nodes.begin(), data_block->input_nodes.end());
-			std::vector<int> output_nodes(data_block->output_nodes.begin(), data_block->output_nodes.end());
-			std::vector<real*> input_blocks;
-			std::vector<real*> output_blocks;
-			//Request blocks to store parameters
-			memory_mamanger_->RequestBlocks(input_nodes.size(), input_blocks);
-			memory_mamanger_->RequestBlocks(output_nodes.size(), output_blocks);
-			assert(input_blocks.size() == input_nodes.size());
-			assert(output_blocks.size() == output_nodes.size());
-
-			GetRows(worker_input_table_, input_nodes, input_blocks, option_->embeding_size);
-			GetRows(worker_output_table_, output_nodes, output_blocks, option_->embeding_size);
-
-			for (int i = 0; i < input_nodes.size(); ++i)
-			{
-				real* new_row = data_block->GetWeightIE(input_nodes[i]);
-				real* old_row = input_blocks[i];
-				assert(new_row != nullptr);
-
-				//#### to do : if delta < eps
-				for (int j = 0; j < option_->embeding_size; ++j)
-				{
-					old_row[j] = (new_row[j] - old_row[j]) / option_->thread_cnt;
-				}
-			}
-
-			for (int i = 0; i < output_nodes.size(); ++i)
-			{
-				real* new_row = data_block->GetWeightEO(output_nodes[i]);
-				real* old_row = output_blocks[i];
-				assert(new_row != nullptr);
-
-				//#### to do : if delta < eps
-				for (int j = 0; j < option_->embeding_size; ++j)
-				{
-					old_row[j] = (new_row[j] - old_row[j]) / option_->thread_cnt;
-				}
-			}
-
-			AddRows(worker_input_table_, input_nodes, input_blocks, option_->embeding_size);
-			AddRows(worker_output_table_, output_nodes, output_blocks, option_->embeding_size);
-
-			memory_mamanger_->ReturnBlocks(input_blocks);
-			memory_mamanger_->ReturnBlocks(output_blocks);
-
-			if (option_->use_adagrad){
-				std::vector<real*> input_gradient_blocks;
-				std::vector<real*> output_gradient_blocks;
-
-				memory_mamanger_->RequestBlocks(input_nodes.size(), input_gradient_blocks);
-				memory_mamanger_->RequestBlocks(output_nodes.size(), output_gradient_blocks);
-
-				GetRows(worker_input_gradient_table_, input_nodes, input_gradient_blocks, option_->embeding_size);
-				GetRows(worker_output_gradient_table_, output_nodes, output_gradient_blocks, option_->embeding_size);
-
-				for (int i = 0; i < input_nodes.size(); ++i)
-				{
-					real* new_row = data_block->GetSumGradient2IE(input_nodes[i]);
-					real* old_row = input_gradient_blocks[i];
-					assert(new_row != nullptr);
-
-					for (int j = 0; j < option_->embeding_size; ++j)
-					{
-						old_row[j] = (new_row[j] - old_row[j]) / option_->thread_cnt;
-					}
-				}
-
-				for (int i = 0; i < output_nodes.size(); ++i)
-				{
-					real* new_row = data_block->GetSumGradient2EO(output_nodes[i]);
-					real* old_row = output_gradient_blocks[i];
-					assert(new_row != nullptr);
-
-					//#### to do : if delta < eps
-					for (int j = 0; j < option_->embeding_size; ++j)
-					{
-						old_row[j] = (new_row[j] - old_row[j]) / option_->thread_cnt;
-					}
-				}
-
-				AddRows(worker_input_gradient_table_, input_nodes, input_gradient_blocks, option_->embeding_size);
-				AddRows(worker_output_gradient_table_, output_nodes, output_gradient_blocks, option_->embeding_size);
-
-				memory_mamanger_->ReturnBlocks(input_gradient_blocks);
-				memory_mamanger_->ReturnBlocks(output_gradient_blocks);
-			}
-
-			multiverso::Log::Info("Add Parameters time:%lfs\n",(clock() - start) / (double)CLOCKS_PER_SEC);
-			multiverso::Log::Info("Rank %d Add Parameter done\n", process_id_);
 		}
 
 		void Distributed_wordembedding::Train(int argc, char *argv[])
 		{
-			//####fix later
+			//fix later
 			argc = 1;
 			argv = nullptr;
-
-			multiverso::MV_Init(&argc,argv);
-			multiverso::Log::Info("MV Init done.\n");
-
+			multiverso::MV_Init(&argc, argv);
+			multiverso::Log::Info("MV Rank %d Init done.\n",multiverso::MV_Rank());
+			
 			MV_Barrier();
 			multiverso::Log::Info("MV Barrier done.\n");
-
 			//Mark the node machine number
 			process_id_ = multiverso::MV_Rank();
 
 			//create worker table and server table
-			PrepareParameterTables(option_, dictionary_);
+			communicator_->PrepareParameterTables(dictionary_->Size(), option_->embeding_size);
 
 			//start to train
-			HRESULT hr = TrainNeuralNetwork();
-			if (FAILED(hr))
-			{
-				multiverso::Log::Info("TrainNeuralNetwork Result is failed.\n");
-			}
+			TrainNeuralNetwork();
 
 			MV_ShutDown();
-			multiverso::Log::Info("MV ShutDone done.");
+			multiverso::Log::Info("MV ShutDone done.\n");
 		}
 
 		void Distributed_wordembedding::Run(int argc, char *argv[])
 		{
 			g_log_suffix = GetSystemTime();
 			srand(static_cast<unsigned int>(time(NULL)));
-			
+
 			option_ = new (std::nothrow)Option();
 			assert(option_ != nullptr);
-			
+
 			dictionary_ = new (std::nothrow)Dictionary();
 			assert(dictionary_ != nullptr);
-			
+
 			huffman_encoder_ = new (std::nothrow)HuffmanEncoder();
 			assert(huffman_encoder_ != nullptr);
 			//Parse argument and store them in option
@@ -503,11 +401,8 @@ namespace multiverso
 				exit(0);
 			}
 
-			multiverso::Log::Info("Loading vocabulary ...\n");
 			option_->total_words = LoadVocab(option_, dictionary_,
 				huffman_encoder_);
-			multiverso::Log::Info("Loaded vocabulary\n");
-			//dictionary_->PrintVocab();
 
 			option_->PrintArgs();
 
@@ -521,6 +416,7 @@ namespace multiverso
 			strcpy(filename, option_->train_file);
 			reader_ = new (std::nothrow)Reader(dictionary_, option_, sampler_, filename);
 			assert(reader_ != nullptr);
+			communicator_ = new (std::nothrow)Communicator(option_);
 			//Train with multiverso
 			this->Train(argc, argv);
 
@@ -529,8 +425,9 @@ namespace multiverso
 			delete huffman_encoder_;
 			delete sampler_;
 			delete reader_;
+			delete communicator_;
 		}
-		 
+
 		//Read the vocabulary file; create the dictionary
 		//and huffman_encoder according opt
 		int64 Distributed_wordembedding::LoadVocab(Option *opt,
@@ -541,7 +438,7 @@ namespace multiverso
 			FILE* fid = nullptr;
 			clock_t start = clock();
 			multiverso::Log::Info("vocab_file %s\n", opt->read_vocab_file);
-			
+
 			if (opt->read_vocab_file != nullptr && strlen(opt->read_vocab_file) > 0)
 			{
 				multiverso::Log::Info("Begin to load vocabulary file [%s] ...\n",
@@ -561,12 +458,12 @@ namespace multiverso
 
 			dictionary->RemoveWordsLessThan(opt->min_count);
 			multiverso::Log::Info("Dictionary size: %d\n", dictionary->Size());
-			
+
 			total_words = 0;
 			for (int i = 0; i < dictionary->Size(); ++i)
 				total_words += dictionary->GetWordInfo(i)->freq;
 			multiverso::Log::Info("Words in Dictionary %I64d\n", total_words);
-			
+
 			multiverso::Log::Info("Loading vocab time:%lfs\n",
 				(clock() - start) / (double)CLOCKS_PER_SEC);
 

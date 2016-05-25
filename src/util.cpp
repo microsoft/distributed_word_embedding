@@ -7,10 +7,10 @@ namespace multiverso
 	{
 		Option::Option()
 		{
-			train_file = NULL;
-			read_vocab_file = NULL;
-			output_file = NULL;
-			sw_file = NULL;
+			train_file = nullptr;
+			read_vocab_file = nullptr;
+			output_file = nullptr;
+			sw_file = nullptr;
 			endpoints_file = "";
 			hs = true;
 			negative_num = 0;
@@ -243,5 +243,14 @@ namespace multiverso
 		}
 
 		std::string g_log_suffix;
+		real* expTable;
+
+		void InitExpTable(){
+			expTable = (real *)malloc((kExpTableSize + 1) * sizeof(real));
+			for (int i = 0; i < kExpTableSize; i++) {
+				expTable[i] = exp((i / (real)kExpTableSize * 2 - 1) * kMaxExp); // Precompute the exp() table
+				expTable[i] = expTable[i] / (expTable[i] + 1);                   // Precompute f(x) = x / (x + 1)
+			}
+		}
 	}
 }

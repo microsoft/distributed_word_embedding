@@ -1,8 +1,5 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_HUFFMAN_ENCODER_H_
 #define DISTRIBUTED_WORD_EMBEDDING_HUFFMAN_ENCODER_H_
-
-#pragma once
-
 /*!
 * \brief Class Huffman_encoder stores the huffman_encode of the vocabulary according the dictionary
 */
