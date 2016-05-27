@@ -1,4 +1,13 @@
-multiverso
 bin
 src/*.o
 data
+*.sdf
+*.suo
+*.pdb
+*.aps
+*.rc
+*.log
+*.idb
+*.tlog
+*.obj
+*.ilk
