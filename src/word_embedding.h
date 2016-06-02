@@ -6,9 +6,6 @@
 */
 
 #include <vector>
-#include <cstring>
-
-#include "multiverso/multiverso.h"
 
 #include "util.h"
 #include "huffman_encoder.h"

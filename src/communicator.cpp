@@ -9,7 +9,7 @@ namespace multiverso
 		void filler(std::vector<T> &v){
 			std::random_device rd;
 			std::mt19937 gen(rd());
-			std::uniform_real_distribution<float> dis(-1.0, 1.0);
+			std::uniform_real_distribution<real> dis(-0.5 / embedding_size, 0.5 / embedding_size);
 
 			for (int i = 0; i<v.size(); i++)
 			{
@@ -21,6 +21,7 @@ namespace multiverso
 			option_ = option;
 			process_id_ = multiverso::MV_Rank();
 			memory_mamanger_ = new MemoryManager(option_->embeding_size);
+			embedding_size = option->embeding_size;
 		}
 
 		Communicator::~Communicator(){
@@ -36,7 +37,6 @@ namespace multiverso
 
 			worker_wordcount_table_ = new KVWorkerTable<int, int64>();
 			server_wordcount_table_ = new KVServerTable<int, int64>();
-			kv_ = worker_wordcount_table_->raw();
 
 			if (option_->use_adagrad){
 				worker_input_gradient_table_ = new MatrixWorkerTable<real>(row_size, column_size);
@@ -51,6 +51,8 @@ namespace multiverso
 			delete worker_output_table_;
 			delete server_input_table_;
 			delete server_output_table_;
+			delete worker_wordcount_table_;
+			delete server_wordcount_table_;
 
 			if (option_->use_adagrad){
 				delete worker_input_gradient_table_;
@@ -213,7 +215,7 @@ namespace multiverso
 		void Communicator::AddDeltaParameter(DataBlock *data_block)
 		{
 			if (data_block == nullptr){
-				multiverso::Log::Info("Rank %d has null DataBlcok\n", process_id_);
+				multiverso::Log::Info("Rank %d has null DataBlcok.\n", process_id_);
 				return;
 			}
 
@@ -255,6 +257,7 @@ namespace multiverso
 		}
 
 		int64 Communicator::GetWordCount(){
+			std::unordered_map<int, int64> &kv_ = worker_wordcount_table_->raw();
 			worker_wordcount_table_->Get(kWordCountId);
 			return kv_[kWordCountId];
 		}

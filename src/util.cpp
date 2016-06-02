@@ -193,15 +193,15 @@ namespace multiverso
 		//Get the size of filename, it should deal with large files
 		int64 GetFileSize(const char *filename)
 		{
-			#ifdef _MSC_VER
+#ifdef _MSC_VER
 			struct _stat64 info;
 			_stat64(filename, &info);
 			return (int64)info.st_size;
-			#else
+#else
 			struct  stat info;
 			stat(filename, &info);
 			return(int64)info.st_size;
-			#endif  
+#endif  
 		}
 
 		//Readword from train_file to word array by the word index
@@ -244,6 +244,7 @@ namespace multiverso
 
 		std::string g_log_suffix;
 		real* expTable;
+		int embedding_size;
 
 		void InitExpTable(){
 			expTable = (real *)malloc((kExpTableSize + 1) * sizeof(real));

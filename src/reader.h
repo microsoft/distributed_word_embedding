@@ -5,7 +5,6 @@
 * \brief Class Reader helps the function Loaddata to fill the datablock
 */
 
-#include <mutex>
 #include <unordered_set>
 
 #include "util.h"

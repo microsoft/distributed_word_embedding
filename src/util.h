@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <random>
 #include <cassert>
-#include <exception>
 #include <sys/stat.h>
 
 #include "constant.h"
@@ -78,6 +77,7 @@ namespace multiverso
 
 		extern std::string g_log_suffix;
 		extern real* expTable;
+		extern int embedding_size;
 
 	}
 }

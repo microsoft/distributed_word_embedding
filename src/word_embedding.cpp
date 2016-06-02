@@ -93,14 +93,23 @@ namespace multiverso
 				f += hidden_act[j] * classifier[j];
 
 			f = 1 / (1 + exp(-f));
-			
+
 			/*
 			if (f >-kMaxExp && f < kMaxExp){
-				f = expTable[(int)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
+			f = expTable[(int)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
 			}
 			*/
-			
-			real error = (1 - label - f);
+
+			//real error = 1 - label - f;
+			real error = 0;
+			if (option_->hs){
+				error = (1 - label - f);
+			}
+
+			if (option_->cbow){
+				error = label - f;
+			}
+
 			//Propagate errors output -> hidden
 			for (int j = 0; j < option_->embeding_size; ++j)
 				hidden_err[j] += error * classifier[j];
@@ -254,7 +263,7 @@ namespace multiverso
 				{
 					int c = sentence_position - option_->window_size + i;
 					if (c < 0 || c >= sentence_length || sentence[c] == -1)
- 						continue;
+						continue;
 
 					feat[feat_size++] = sentence[c];
 					if (!option_->cbow) //train Skip-gram
@@ -312,12 +321,12 @@ namespace multiverso
 
 		void WordEmbedding::SetWeightIE(int input_node_id, real* ptr)
 		{
-			data_block_->SetWeightIE(input_node_id,ptr);
+			data_block_->SetWeightIE(input_node_id, ptr);
 		}
 
 		void WordEmbedding::SetWeightEO(int output_node_id, real* ptr)
 		{
-			data_block_->SetWeightEO(output_node_id,ptr);
+			data_block_->SetWeightEO(output_node_id, ptr);
 		}
 
 		real* WordEmbedding::GetWeightIE(int input_node_id)

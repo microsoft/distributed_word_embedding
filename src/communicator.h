@@ -1,7 +1,6 @@
 #ifndef DISTRIBUTED_WORD_EMBEDDING_COMMUNICATOR_H_
 #define DISTRIBUTED_WORD_EMBEDDING_COMMUNICATOR_H_
 
-#include "multiverso/multiverso.h"
 #include "multiverso/table/matrix_table.h"
 #include "multiverso/table/kv_table.h"
 #include "multiverso/updater/updater.h"
@@ -30,7 +29,7 @@ namespace multiverso
 
 			int64 GetWordCount();
 			void AddWordCount(int word_count_num);
-			
+
 			void GetWorkerTableRows(std::vector<int> row_nums, std::vector<real*> &blocks, int embeding_size);
 
 			void PrepareParameterTables(int row_size, int column_size);
@@ -39,7 +38,6 @@ namespace multiverso
 			Option* option_ = nullptr;
 			MemoryManager* memory_mamanger_ = nullptr;
 			int process_id_;
-			std::unordered_map<int, int64> kv_;
 
 			MatrixWorkerTable<real>* worker_input_table_ = nullptr;
 			MatrixWorkerTable<real>* worker_output_table_ = nullptr;
