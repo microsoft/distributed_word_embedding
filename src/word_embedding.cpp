@@ -106,7 +106,7 @@ namespace multiverso
 				error = (1 - label - f);
 			}
 
-			if (option_->cbow){
+			if (option_->negative_num){
 				error = label - f;
 			}
 
