@@ -5,19 +5,6 @@ namespace multiverso
 {
 	namespace wordembedding
 	{
-		template <typename T>
-		void filler(std::vector<T> &v){
-			std::random_device rd;
-			std::mt19937 gen(rd());
-			std::uniform_real_distribution<real> dis(-0.5 / embedding_size,
-				0.5 / embedding_size);
-
-			for (int i = 0; i<v.size(); i++)
-			{
-				v[i] = dis(gen);
-			}
-		}
-
 		Communicator::Communicator(Option* option, MemoryManager* memory_mamanger)
 		{
 			option_ = option;
@@ -34,7 +21,7 @@ namespace multiverso
 		void Communicator::PrepareParameterTables(int row_size, int column_size){
 			worker_input_table_ = new MatrixWorkerTable<real>(row_size, column_size);
 			worker_output_table_ = new MatrixWorkerTable<real>(row_size, column_size);
-			server_input_table_ = new MatrixServerTable<real>(row_size, column_size, &filler);
+			server_input_table_ = new MatrixServerTable<real>(row_size, column_size, -0.5 / embedding_size, 0.5 / embedding_size);
 			server_output_table_ = new MatrixServerTable<real>(row_size, column_size);
 
 			worker_wordcount_table_ = new KVWorkerTable<int, int64>();
