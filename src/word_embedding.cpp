@@ -14,11 +14,6 @@ namespace multiverso
 			dictionary_size_ = dictionary_size;
 			learning_rate = option_->init_learning_rate;
 			data_block_ = nullptr;
-			//InitExpTable();
-		}
-
-		WordEmbedding::~WordEmbedding()
-		{
 		}
 
 		//Train neural networks of WordEmbedding
@@ -50,17 +45,19 @@ namespace multiverso
 			if (option_->use_adagrad == false)
 			{
 				learning_rate = static_cast<real>(option_->init_learning_rate *
-					(1 - word_count_actual / ((real)option_->total_words * option_->epoch + 1.0)));
+					(1 - word_count_actual / (static_cast<double>(option_->total_words * option_->epoch) + 1.0)));
 				if (learning_rate < option_->init_learning_rate * 0.0001)
-					learning_rate = static_cast<real>(option_->init_learning_rate * 0.0001);
+					learning_rate = (static_cast<double>(option_->init_learning_rate) * 0.0001);
 			}
 		}
 
 		void WordEmbedding::Train(int* sentence, int sentence_length,
-			uint64 next_random, real* hidden_act, real* hidden_err, std::vector <int> &negativesample_pools)
+			uint64 next_random, real* hidden_act, real* hidden_err,
+			std::vector <int> &negativesample_pools)
 		{
 			ParseSentence(sentence, sentence_length,
-				next_random, hidden_act, hidden_err, &WordEmbedding::TrainSample, negativesample_pools);
+				next_random, hidden_act, hidden_err, 
+				&WordEmbedding::TrainSample, negativesample_pools);
 		}
 		//Train with forward direction and get  the input-hidden layer vector
 		void WordEmbedding::FeedForward(std::vector<int>& input_nodes, real* hidden_act)
@@ -85,8 +82,9 @@ namespace multiverso
 		void WordEmbedding::BPOutputLayer(int label, int word_idx,
 			real* classifier, real* hidden_act, real* hidden_err)
 		{
-			assert(classifier != nullptr && hidden_act != nullptr && hidden_err != nullptr);
-			real f = 0;
+			assert(classifier != nullptr && hidden_act != nullptr 
+				&& hidden_err != nullptr);
+			real f = 0.0f;
 
 			//Propagate hidden -> output
 			for (int j = 0; j < option_->embeding_size; ++j)
@@ -94,14 +92,7 @@ namespace multiverso
 
 			f = 1 / (1 + exp(-f));
 			
-			/*
-			if (f >-kMaxExp && f < kMaxExp){
-				f = expTable[(int)((f + kMaxExp) * (kExpTableSize / kMaxExp / 2))];
-			}
-			*/
-			
-			//real error = 1 - label - f;
-			real error = 0;
+			real error = 0.0f;
 			if (option_->hs){
 				error = (1 - label - f);
 			}
@@ -124,7 +115,8 @@ namespace multiverso
 					real g = error * hidden_act[j];
 					sum_gradient2_row[j] += g * g;
 					if (sum_gradient2_row[j] > 1e-10)
-						classifier[j] += g * option_->init_learning_rate / sqrt(sum_gradient2_row[j]);
+						classifier[j] += g * option_->init_learning_rate /
+						sqrt(sum_gradient2_row[j]);
 				}
 			}
 			else
@@ -171,7 +163,8 @@ namespace multiverso
 					{
 						sum_gradient2_row[j] += hidden_err[j] * hidden_err[j];
 						if (sum_gradient2_row[j] > 1e-10)
-							input_embedding_row[j] += hidden_err[j] * option_->init_learning_rate / sqrt(sum_gradient2_row[j]);
+							input_embedding_row[j] += hidden_err[j] * option_->init_learning_rate / 
+							sqrt(sum_gradient2_row[j]);
 					}
 				}
 			}
@@ -202,7 +195,8 @@ namespace multiverso
 			{
 				for (int i = 0; i < data_block->Size(); ++i)
 				{
-					data_block->GetSentence(i, sentence, sentence_length, word_count_delta, next_random);
+					data_block->GetSentence(i, sentence, sentence_length, 
+						word_count_delta, next_random);
 
 					for (int sentence_position = 0; sentence_position < sentence_length; ++sentence_position)
 					{
@@ -220,7 +214,8 @@ namespace multiverso
 			{
 				for (int i = 0; i < data_block->Size(); ++i)
 				{
-					data_block->GetSentence(i, sentence, sentence_length, word_count_delta, next_random);
+					data_block->GetSentence(i, sentence, sentence_length, 
+						word_count_delta, next_random);
 
 					for (int sentence_position = 0; sentence_position < sentence_length; ++sentence_position)
 					{
@@ -282,7 +277,6 @@ namespace multiverso
 					output_nodes.clear();
 					Parse(feat, feat_size, sentence[sentence_position],
 						next_random, input_nodes, output_nodes, negativesample_pools);
-
 					(this->*function)(input_nodes, output_nodes, hidden_act, hidden_err);
 				}
 			}

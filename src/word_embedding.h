@@ -25,7 +25,6 @@ namespace multiverso
 
 			WordEmbedding(Option* option, HuffmanEncoder* huffmanEncoder,
 				Sampler* sampler, int dictionary_size);
-			~WordEmbedding();
 			/*!
 			* \brief Create memory for weight_IE_ weight_EO_ sum_gradient2_IE_ sum_gradient2_EO_
 			*/

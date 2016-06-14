@@ -50,6 +50,7 @@ namespace multiverso
 		{
 		public:
 			Sampler();
+			~Sampler();
 			/*!
 			* \brief Set the negative-sampling distribution for every vocabulary
 			* \param dictionary the train_file dictionary
@@ -73,8 +74,8 @@ namespace multiverso
 		std::string GetSystemTime();
 		int64 GetFileSize(const char *filename);
 		bool ReadWord(char *word, FILE *fin);
-		void InitExpTable();
 
+		void InitExpTable();
 		extern std::string g_log_suffix;
 		extern real* expTable;
 		extern int embedding_size;

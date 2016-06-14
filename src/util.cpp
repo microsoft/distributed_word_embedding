@@ -137,6 +137,11 @@ namespace multiverso
 		{
 			table_ = nullptr;
 		}
+		
+		Sampler::~Sampler()
+		{
+			free(table_);
+		}
 		//Set the negative-sampling distribution
 		void Sampler::SetNegativeSamplingDistribution(Dictionary *dictionary)
 		{

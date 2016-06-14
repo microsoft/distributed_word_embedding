@@ -23,7 +23,7 @@ namespace multiverso
 		const int kWordCountId = 4;
 
 		const int kTableSize = (int)1e8;
-		//const real kEps = static_cast<real>(1e-10);
+
 		const int kMaxWordSize = 901;
 		const int kMaxCodeLength = 100;
 		const int kMaxString = 100;

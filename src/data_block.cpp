@@ -55,8 +55,8 @@ namespace multiverso
 
 			if (is_use_adagrad_)
 			{
-				delete sum_gradient2_IE_;
-				delete sum_gradient2_EO_;
+				delete []sum_gradient2_IE_;
+				delete []sum_gradient2_EO_;
 			}
 		}
 		

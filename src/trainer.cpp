@@ -20,15 +20,6 @@ namespace multiverso
 			assert(hidden_err_ != nullptr);
 			start_ = 0;
 			train_count_ = 0;
-			/*
-			if (trainer_id_ == 0)
-			{
-				//The log which recordes the begin and end time of TrainIteration()
-				char log_name[100];
-				sprintf(log_name, "trainer%s.txt", g_log_suffix.c_str());
-				log_file_ = fopen(log_name, "w");
-			}
-			*/
 		}
 
 		Trainer::~Trainer()
@@ -49,7 +40,7 @@ namespace multiverso
 			int64 last_word_count = word_count;
 			clock_t start = clock();
 
-			multiverso::Log::Info("Rank %d Train %d TrainNN Begin TrainIteration%d ...\n",
+			multiverso::Log::Debug("Rank %d Train %d TrainNN Begin TrainIteration%d ...\n",
 				process_id_, trainer_id_, train_count_);
 
 			WordEmbedding_->Train(data_block, trainer_id_, option_->thread_cnt,
@@ -57,12 +48,13 @@ namespace multiverso
 
 			if (word_count > last_word_count)
 			{
-				multiverso::Log::Info("TrainNNSpeed: Words/thread/second %lfk\n",
-					((double)word_count - last_word_count) /
-					(clock() - start) / static_cast<double>(CLOCKS_PER_SEC) * 1000);
+				multiverso::Log::Info("Rank %d TrainNNSpeed: Words/thread/second %lfk\n",
+					process_id_,
+					(static_cast<double>(word_count) - last_word_count) /
+					(clock() - start) * static_cast<double>(CLOCKS_PER_SEC) / 1000);
 			}
 
-			multiverso::Log::Info("Rank %d Trainer %d training time:%lfs\n",process_id_,trainer_id_,
+			multiverso::Log::Debug("Rank %d Trainer %d training time:%lfs\n",process_id_,trainer_id_,
 				(clock() - start) / static_cast<double>(CLOCKS_PER_SEC));
 			train_count_++;
 		}

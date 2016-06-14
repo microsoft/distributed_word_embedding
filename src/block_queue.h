@@ -2,7 +2,6 @@
 #define DISTRIBUTED_WORD_EMBEDDING_BLOCK_QUEUE_H_
 
 #include <condition_variable>
-
 #include <mutex>
 #include <queue>
 

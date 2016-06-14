@@ -52,7 +52,8 @@ namespace multiverso
 			std::thread collect_wordcount_thread_;
 			bool is_running_ = false;
 			std::vector<Trainer*> trainers_;
-			Communicator* communicator_;
+			Communicator* communicator_=nullptr;
+			MemoryManager* memory_mamanger_ = nullptr;
 
 			/*!
 			* \brief Load Dictionary from the vocabulary_file
@@ -63,46 +64,27 @@ namespace multiverso
 			int64 LoadVocab(Option *opt, Dictionary *dictionary,
 				HuffmanEncoder *huffman_encoder);
 
-			/*!
-			* \brief Loaddata from train_file to datablock
-			* \param datablock the datablock which needs to be assigned
-			* \param reader some useful function for calling
-			* \param size datablock limit byte size
-			*/
-			//void LoadData(DataBlock *data_block, Reader *reader, int64 size);
-
-			/*!
-			* \brief Complete the train task with multiverso
-			*/
 			void Train(int argc, char *argv[]);
 			void TrainNeuralNetwork();
 
 			void PrepareData(DataBlock *data_block);
 
-			void StartLoadDataThread(BlockQueue *block_queue,
-				Reader *reader, int64 file_size);
-
+			void StartLoadDataThread(Reader *reader, int64 file_size);
 			void LoadOneBlock(DataBlock *data_block,
 				Reader *reader, int64 size);
 
 			void StartCollectWordcountThread();
-
 			void StopCollectWordcountThread();
 
 			void StartWordCount();
-
 			void GetAllWordCount();
-
 			void AddDeltaWordCount();
 
-			DataBlock* GetDataFromQueue(BlockQueue *block_queue);
-
-			DataBlock* GetBlockAndPrepareParameter(BlockQueue *block_queue_);
+			DataBlock* GetDataFromQueue();
+			DataBlock* GetBlockAndPrepareParameter();
 
 			void SaveEmbedding(const char *file_path, bool is_binary);
-
 			void WriteToFile(bool is_binary, std::vector<real*> &blocks, FILE* fid);
-
 			const char* ChangeFileName(const char *file_path, int iteration);
 		};
 	}
