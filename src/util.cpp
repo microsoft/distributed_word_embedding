@@ -187,11 +187,17 @@ namespace multiverso
 
 		std::string GetSystemTime()
 		{
+			/*
 			time_t t = time(0);
 			tm timeinfo;
 			localtime_s(&timeinfo, &t);
 			char tmp[128];
 			strftime(tmp, sizeof(tmp), "%Y%m%d%H%M%S", &timeinfo);
+			return std::string(tmp);
+			*/
+			time_t t = time(0);
+			char tmp[128];
+			strftime(tmp, sizeof(tmp), "%Y%m%d%H%M%S", localtime(&t));
 			return std::string(tmp);
 		}
 

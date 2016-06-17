@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 #include <iostream>
-
+#include <cstring>
 #include "multiverso/util/log.h"
 
 #include "constant.h"
