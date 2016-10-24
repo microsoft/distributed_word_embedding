@@ -1,4 +1,4 @@
-This Repo was deprecated, please check the [new version](https://github.com/Microsoft/multiverso/tree/master/Applications/WordEmbedding).
+This repo was deprecated, please check the [new version](https://github.com/Microsoft/multiverso/tree/master/Applications/WordEmbedding).
 
 Distributed Word Embedding
 ==========
